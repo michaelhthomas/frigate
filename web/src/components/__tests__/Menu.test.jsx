@@ -27,7 +27,7 @@ describe('MenuItem', () => {
   });
 
   test('calls onSelect when clicked', async () => {
-    const handleSelect = jest.fn();
+    const handleSelect = vi.fn();
     render(<MenuItem label="Tacos" onSelect={handleSelect} value="tacos-value" />);
     fireEvent.click(screen.queryByRole('option'));
     expect(handleSelect).toHaveBeenCalledWith('tacos-value', 'Tacos');

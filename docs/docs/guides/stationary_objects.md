@@ -3,7 +3,7 @@ id: stationary_objects
 title: Avoiding stationary objects
 ---
 
-Many people use Frigate to detect cars entering their driveway, and they often run into an issue with repeated events of a parked car being repeatedly detected. This is because object tracking stops when motion ends and the event ends. Motion detection works by determining if a sufficient number of pixels have changed between frames. Shadows or other lighting changes will be detected as motion. This will often cause a new event for a parked car.
+Many people use Frigate to detect cars entering their driveway, and they often run into an issue with repeated notifications or events of a parked car being repeatedly detected over the course of multiple days (for example if the car is lost at night and detected again the following morning).
 
 You can use zones to restrict events and notifications to objects that have entered specific areas.
 
@@ -15,9 +15,15 @@ Frigate is designed to track objects as they move and over-masking can prevent i
 
 :::
 
+:::info
+
+Once a vehicle crosses the entrance into the parking area, that event will stay `In Progress` until it is no longer seen in the frame. Frigate is designed to have an event last as long as an object is visible in the frame, an event being `In Progress` does not mean the event is being constantly recorded. You can define the recording behavior by adjusting the [recording retention settings](../configuration/record.md).
+
+:::
+
 To only be notified of cars that enter your driveway from the street, you could create multiple zones that cover your driveway. For cars, you would only notify if `entered_zones` from the events MQTT topic has more than 1 zone.
 
-See [this example](/configuration/zones#restricting-zones-to-specific-objects) from the Zones documentation to see how to restrict zones to certain object types.
+See [this example](../configuration/zones.md#restricting-zones-to-specific-objects) from the Zones documentation to see how to restrict zones to certain object types.
 
 ![Driveway Zones](/img/driveway_zones-min.png)
 

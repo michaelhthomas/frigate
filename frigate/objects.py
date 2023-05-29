@@ -1,14 +1,7 @@
-import copy
-import datetime
-import itertools
-import multiprocessing as mp
 import random
 import string
-import threading
-import time
 from collections import defaultdict
 
-import cv2
 import numpy as np
 from scipy.spatial import distance as dist
 
@@ -111,6 +104,8 @@ class ObjectTracker:
         ):
             return True
 
+        return False
+
     def update(self, id, new_obj):
         self.disappeared[id] = 0
         # update the motionless count if the object has not moved to a new position
@@ -149,7 +144,8 @@ class ObjectTracker:
                     "score": obj[1],
                     "box": obj[2],
                     "area": obj[3],
-                    "region": obj[4],
+                    "ratio": obj[4],
+                    "region": obj[5],
                     "frame_time": frame_time,
                 }
             )
@@ -157,7 +153,7 @@ class ObjectTracker:
         # update any tracked objects with labels that are not
         # seen in the current objects and deregister if needed
         for obj in list(self.tracked_objects.values()):
-            if not obj["label"] in new_object_groups:
+            if obj["label"] not in new_object_groups:
                 if self.disappeared[obj["id"]] >= self.max_disappeared:
                     self.deregister(obj["id"])
                 else:

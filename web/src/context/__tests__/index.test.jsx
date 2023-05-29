@@ -1,8 +1,9 @@
 import { h } from 'preact';
-import * as IDB from 'idb-keyval';
+import { set as setData } from 'idb-keyval';
 import { DarkModeProvider, useDarkMode, usePersistence } from '..';
-import { fireEvent, render, screen } from '@testing-library/preact';
+import { fireEvent, render, screen } from 'testing-library';
 import { useCallback } from 'preact/hooks';
+import * as WS from '../../api/ws';
 
 function DarkModeChecker() {
   const { currentMode } = useDarkMode();
@@ -10,12 +11,8 @@ function DarkModeChecker() {
 }
 
 describe('DarkMode', () => {
-  let MockIDB;
   beforeEach(() => {
-    MockIDB = {
-      get: jest.spyOn(IDB, 'get').mockImplementation(() => Promise.resolve(undefined)),
-      set: jest.spyOn(IDB, 'set').mockImplementation(() => Promise.resolve(true)),
-    };
+    vi.spyOn(WS, 'WsProvider').mockImplementation(({ children }) => children);
   });
 
   test('uses media by default', async () => {
@@ -29,7 +26,7 @@ describe('DarkMode', () => {
   });
 
   test('uses the mode stored in idb - dark', async () => {
-    MockIDB.get.mockResolvedValue('dark');
+    setData('darkmode', 'dark');
     render(
       <DarkModeProvider>
         <DarkModeChecker />
@@ -41,7 +38,7 @@ describe('DarkMode', () => {
   });
 
   test('uses the mode stored in idb - light', async () => {
-    MockIDB.get.mockResolvedValue('light');
+    setData('darkmode', 'light');
     render(
       <DarkModeProvider>
         <DarkModeChecker />
@@ -53,7 +50,7 @@ describe('DarkMode', () => {
   });
 
   test('allows updating the mode', async () => {
-    MockIDB.get.mockResolvedValue('dark');
+    setData('darkmode', 'dark');
 
     function Updater() {
       const { setDarkMode } = useDarkMode();
@@ -83,10 +80,10 @@ describe('DarkMode', () => {
   });
 
   test('when using media, matches on preference', async () => {
-    MockIDB.get.mockResolvedValue('media');
-    jest.spyOn(window, 'matchMedia').mockImplementation((query) => {
+    setData('darkmode', 'media');
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => {
       if (query === '(prefers-color-scheme: dark)') {
-        return { matches: true, addEventListener: jest.fn(), removeEventListener: jest.fn() };
+        return { matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() };
       }
 
       throw new Error(`Unexpected query to matchMedia: ${query}`);
@@ -104,23 +101,8 @@ describe('DarkMode', () => {
 });
 
 describe('usePersistence', () => {
-  let MockIDB;
-  beforeEach(() => {
-    MockIDB = {
-      get: jest.spyOn(IDB, 'get').mockImplementation(() => Promise.resolve(undefined)),
-      set: jest.spyOn(IDB, 'set').mockImplementation(() => Promise.resolve(true)),
-    };
-  });
 
   test('returns a defaultValue initially', async () => {
-    MockIDB.get.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => {
-            resolve('foo');
-          }, 1);
-        })
-    );
 
     function Component() {
       const [value, , loaded] = usePersistence('tacos', 'my-default');
@@ -148,12 +130,10 @@ describe('usePersistence', () => {
         my-default
       </div>
     `);
-
-    jest.runAllTimers();
   });
 
   test('updates with the previously-persisted value', async () => {
-    MockIDB.get.mockResolvedValue('are delicious');
+    setData('tacos', 'are delicious');
 
     function Component() {
       const [value, , loaded] = usePersistence('tacos', 'my-default');
@@ -186,7 +166,7 @@ describe('usePersistence', () => {
   });
 
   test('can be updated manually', async () => {
-    MockIDB.get.mockResolvedValue('are delicious');
+    setData('darkmode', 'are delicious');
 
     function Component() {
       const [value, setValue] = usePersistence('tacos', 'my-default');

@@ -21,7 +21,7 @@ describe('Switch', () => {
   });
 
   test('calls onChange callback when checked/unchecked', async () => {
-    const handleChange = jest.fn();
+    const handleChange = vi.fn();
     const { rerender } = render(<Switch id="check" onChange={handleChange} />);
     fireEvent.change(screen.queryByTestId('check-input'), { checked: true });
     expect(handleChange).toHaveBeenCalledWith('check', true);

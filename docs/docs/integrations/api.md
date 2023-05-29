@@ -24,19 +24,9 @@ Accepts the following query string parameters:
 
 You can access a higher resolution mjpeg stream by appending `h=height-in-pixels` to the endpoint. For example `http://localhost:5000/api/back?h=1080`. You can also increase the FPS by appending `fps=frame-rate` to the URL such as `http://localhost:5000/api/back?fps=10` or both with `?fps=10&h=1000`.
 
-### `GET /api/<camera_name>/<object_name>/best.jpg[?h=300&crop=1&quality=70]`
-
-The best snapshot for any object type. It is a full resolution image by default.
-
-Example parameters:
-
-- `h=300`: resizes the image to 300 pixes tall
-- `crop=1`: crops the image to the region of the detection rather than returning the entire image
-- `quality=70`: sets the jpeg encoding quality (0-100)
-
 ### `GET /api/<camera_name>/latest.jpg[?h=300]`
 
-The most recent frame that frigate has finished processing. It is a full resolution image by default.
+The most recent frame that Frigate has finished processing. It is a full resolution image by default.
 
 Accepts the following query string parameters:
 
@@ -73,7 +63,7 @@ Sample response:
     "camera_fps": 5.0,
     /***************
      * Number of times detection is run per second. This can be higher than
-     * your camera FPS because frigate often looks at the same frame multiple times
+     * your camera FPS because Frigate often looks at the same frame multiple times
      * or in multiple locations
      ***************/
     "detection_fps": 1.5,
@@ -86,11 +76,11 @@ Sample response:
      ***************/
     "pid": 34,
     /***************
-     * Frames per second being processed by frigate.
+     * Frames per second being processed by Frigate.
      ***************/
     "process_fps": 5.1,
     /***************
-     * Frames per second skip for processing by frigate.
+     * Frames per second skip for processing by Frigate.
      ***************/
     "skipped_fps": 0.0
   },
@@ -120,7 +110,8 @@ Sample response:
   "service": {
     /* Uptime in seconds */
     "uptime": 10,
-    "version": "0.8.0-8883709",
+    "version": "0.10.1-8883709",
+    "latest_version": "0.10.1",
     /* Storage data in MB for important locations */
     "storage": {
       "/media/frigate/clips": {
@@ -168,13 +159,24 @@ Events from the database. Accepts the following query string parameters:
 | -------------------- | ---- | --------------------------------------------- |
 | `before`             | int  | Epoch time                                    |
 | `after`              | int  | Epoch time                                    |
-| `camera`             | str  | Camera name                                   |
-| `label`              | str  | Label name                                    |
-| `zone`               | str  | Zone name                                     |
+| `cameras`            | str  | , separated list of cameras                   |
+| `labels`             | str  | , separated list of labels                    |
+| `zones`              | str  | , separated list of zones                     |
 | `limit`              | int  | Limit the number of events returned           |
 | `has_snapshot`       | int  | Filter to events that have snapshots (0 or 1) |
 | `has_clip`           | int  | Filter to events that have clips (0 or 1)     |
 | `include_thumbnails` | int  | Include thumbnails in the response (0 or 1)   |
+| `in_progress`        | int  | Limit to events in progress (0 or 1)          |
+
+### `GET /api/timeline`
+
+Timeline of key moments of an event(s) from the database. Accepts the following query string parameters:
+
+| param       | Type | Description                         |
+| ----------- | ---- | ----------------------------------- |
+| `camera`    | str  | Name of camera                      |
+| `source_id` | str  | ID of tracked object                |
+| `limit`     | int  | Limit the number of events returned |
 
 ### `GET /api/events/summary`
 
@@ -188,9 +190,44 @@ Returns data for a single event.
 
 Permanently deletes the event along with any clips/snapshots.
 
+### `POST /api/events/<id>/retain`
+
+Sets retain to true for the event id.
+
+### `POST /api/events/<id>/plus`
+
+Submits the snapshot of the event to Frigate+ for labeling.
+
+| param                | Type | Description                        |
+| -------------------- | ---- | ---------------------------------- |
+| `include_annotation` | int  | Submit annotation to Frigate+ too. |
+
+### `PUT /api/events/<id>/false_positive`
+
+Submits the snapshot of the event to Frigate+ for labeling and adds the detection as a false positive.
+
+### `DELETE /api/events/<id>/retain`
+
+Sets retain to false for the event id (event may be deleted quickly after removing).
+
+### `POST /api/events/<id>/sub_label`
+
+Set a sub label for an event. For example to update `person` -> `person's name` if they were recognized with facial recognition.
+Sub labels must be 100 characters or shorter.
+
+```json
+{
+  "subLabel": "some_string"
+}
+```
+
 ### `GET /api/events/<id>/thumbnail.jpg`
 
 Returns a thumbnail for the event id optimized for notifications. Works while the event is in progress and after completion. Passing `?format=android` will convert the thumbnail to 2:1 aspect ratio.
+
+### `GET /api/<camera_name>/<label>/thumbnail.jpg`
+
+Returns the thumbnail from the latest event for the given camera and label combo. Using `any` as the label will return the latest thumbnail regardless of type.
 
 ### `GET /api/events/<id>/clip.mp4`
 
@@ -210,6 +247,14 @@ Accepts the following query string parameters, but they are only applied when an
 | `crop`      | int  | Crop the snapshot to the (0 or 1)                 |
 | `quality`   | int  | Jpeg encoding quality (0-100). Defaults to 70.    |
 
+### `GET /api/<camera_name>/<label>/snapshot.jpg`
+
+Returns the snapshot image from the latest event for the given camera and label combo. Using `any` as the label will return the latest thumbnail regardless of type.
+
+### `GET /api/<camera_name>/recording/<frame_time>/snapshot.png`
+
+Returns the snapshot image from the specific point in that cameras recordings.
+
 ### `GET /clips/<camera>-<id>.jpg`
 
 JPG snapshot for the given camera and event id.
@@ -222,10 +267,69 @@ HTTP Live Streaming Video on Demand URL for the specified hour and camera. Can b
 
 HTTP Live Streaming Video on Demand URL for the specified event. Can be viewed in an application like VLC.
 
-### `GET /vod/event/<event-id>/index.m3u8`
-
-HTTP Live Streaming Video on Demand URL for the specified event. Can be viewed in an application like VLC.
-
 ### `GET /vod/<camera>/start/<start-timestamp>/end/<end-timestamp>/index.m3u8`
 
 HTTP Live Streaming Video on Demand URL for the camera with the specified time range. Can be viewed in an application like VLC.
+
+### `GET /api/<camera_name>/recordings/summary`
+
+Hourly summary of recordings data for a camera.
+
+### `GET /api/<camera_name>/recordings`
+
+Get recording segment details for the given timestamp range.
+
+| param    | Type | Description                           |
+| -------- | ---- | ------------------------------------- |
+| `after`  | int  | Unix timestamp for beginning of range |
+| `before` | int  | Unix timestamp for end of range       |
+
+### `GET /api/ffprobe`
+
+Get ffprobe output for camera feed paths.
+
+| param   | Type   | Description                        |
+| ------- | ------ | ---------------------------------- |
+| `paths` | string | `,` separated list of camera paths |
+
+### `GET /api/<camera_name>/ptz/info`
+
+Get PTZ info for the camera.
+
+### `POST /api/events/<camera_name>/<label>/create`
+
+Create a manual API with a given `label` (ex: doorbell press) to capture a specific event besides an object being detected.
+
+**Optional Body:**
+
+```json
+{
+  "subLabel": "some_string", // add sub label to event
+  "duration": 30, // predetermined length of event (default: 30 seconds) or can be to null for indeterminate length event
+  "include_recording": true, // whether the event should save recordings along with the snapshot that is taken
+  "draw": {
+    // optional annotations that will be drawn on the snapshot
+    "boxes": [
+      {
+        "box": [0.5, 0.5, 0.25, 0.25], // box consists of x, y, width, height which are on a scale between 0 - 1
+        "color": [255, 0, 0], // color of the box, default is red
+        "score": 100 // optional score associated with the box
+      }
+    ]
+  }
+}
+```
+
+**Success Response:**
+
+```json
+{
+  "event_id": "1682970645.13116-1ug7ns",
+  "message": "Successfully created event.",
+  "success": true
+}
+```
+
+### `PUT /api/events/<event_id>/end`
+
+End a specific manual event without a predetermined length.

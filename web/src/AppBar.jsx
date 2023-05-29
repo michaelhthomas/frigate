@@ -6,10 +6,10 @@ import AutoAwesomeIcon from './icons/AutoAwesome';
 import LightModeIcon from './icons/LightMode';
 import DarkModeIcon from './icons/DarkMode';
 import FrigateRestartIcon from './icons/FrigateRestart';
-import Dialog from './components/Dialog';
+import Prompt from './components/Prompt';
 import { useDarkMode } from './context';
 import { useCallback, useRef, useState } from 'preact/hooks';
-import { useRestart } from './api/mqtt';
+import { useRestart } from './api/ws';
 
 export default function AppBar() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -19,7 +19,7 @@ export default function AppBar() {
   const { send: sendRestart } = useRestart();
 
   const handleSelectDarkMode = useCallback(
-    (value, label) => {
+    (value) => {
       setDarkMode(value);
       setShowMoreMenu(false);
     },
@@ -65,7 +65,7 @@ export default function AppBar() {
         </Menu>
       ) : null}
       {showDialog ? (
-        <Dialog
+        <Prompt
           onDismiss={handleDismissRestartDialog}
           title="Restart Frigate"
           text="Are you sure?"
@@ -76,9 +76,9 @@ export default function AppBar() {
         />
       ) : null}
       {showDialogWait ? (
-        <Dialog
+        <Prompt
           title="Restart in progress"
-          text="Please wait a few seconds for the restart to complete before reloading the page."
+          text="This can take up to one minute, please wait before reloading the page."
         />
       ) : null}
     </Fragment>

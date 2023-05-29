@@ -1,11 +1,19 @@
 import cv2
 import imutils
 import numpy as np
+
 from frigate.config import MotionConfig
 
 
 class MotionDetector:
-    def __init__(self, frame_shape, config: MotionConfig):
+    def __init__(
+        self,
+        frame_shape,
+        config: MotionConfig,
+        improve_contrast_enabled,
+        motion_threshold,
+        motion_contour_area,
+    ):
         self.config = config
         self.frame_shape = frame_shape
         self.resize_factor = frame_shape[0] / config.frame_height
@@ -13,8 +21,8 @@ class MotionDetector:
             config.frame_height,
             config.frame_height * frame_shape[1] // frame_shape[0],
         )
-        self.avg_frame = np.zeros(self.motion_frame_size, np.float)
-        self.avg_delta = np.zeros(self.motion_frame_size, np.float)
+        self.avg_frame = np.zeros(self.motion_frame_size, np.float32)
+        self.avg_delta = np.zeros(self.motion_frame_size, np.float32)
         self.motion_frame_count = 0
         self.frame_counter = 0
         resized_mask = cv2.resize(
@@ -24,6 +32,9 @@ class MotionDetector:
         )
         self.mask = np.where(resized_mask == [0])
         self.save_images = False
+        self.improve_contrast = improve_contrast_enabled
+        self.threshold = motion_threshold
+        self.contour_area = motion_contour_area
 
     def detect(self, frame):
         motion_boxes = []
@@ -38,7 +49,7 @@ class MotionDetector:
         )
 
         # Improve contrast
-        if self.config.improve_contrast:
+        if self.improve_contrast.value:
             minval = np.percentile(resized_frame, 4)
             maxval = np.percentile(resized_frame, 96)
             # don't adjust if the image is a single color
@@ -68,7 +79,7 @@ class MotionDetector:
 
             # compute the threshold image for the current frame
             current_thresh = cv2.threshold(
-                frameDelta, self.config.threshold, 255, cv2.THRESH_BINARY
+                frameDelta, self.threshold.value, 255, cv2.THRESH_BINARY
             )[1]
 
             # black out everything in the avg_delta where there isnt motion in the current frame
@@ -78,7 +89,7 @@ class MotionDetector:
             # then look for deltas above the threshold, but only in areas where there is a delta
             # in the current frame. this prevents deltas from previous frames from being included
             thresh = cv2.threshold(
-                avg_delta_image, self.config.threshold, 255, cv2.THRESH_BINARY
+                avg_delta_image, self.threshold.value, 255, cv2.THRESH_BINARY
             )[1]
 
             # dilate the thresholded image to fill in holes, then find contours
@@ -93,7 +104,7 @@ class MotionDetector:
             for c in cnts:
                 # if the contour is big enough, count it as motion
                 contour_area = cv2.contourArea(c)
-                if contour_area > self.config.contour_area:
+                if contour_area > self.contour_area.value:
                     x, y, w, h = cv2.boundingRect(c)
                     motion_boxes.append(
                         (
@@ -110,8 +121,7 @@ class MotionDetector:
                 # print(self.frame_counter)
                 for c in cnts:
                     contour_area = cv2.contourArea(c)
-                    # print(contour_area)
-                    if contour_area > self.config.contour_area:
+                    if contour_area > self.contour_area.value:
                         x, y, w, h = cv2.boundingRect(c)
                         cv2.rectangle(
                             thresh_dilated,

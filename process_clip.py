@@ -1,8 +1,4 @@
-import sys
-from typing_extensions import runtime
-
-sys.path.append("/lab/frigate")
-
+import csv
 import json
 import logging
 import multiprocessing as mp
@@ -11,21 +7,26 @@ import subprocess as sp
 import sys
 
 import click
-import csv
 import cv2
 import numpy as np
 
-from frigate.config import FrigateConfig
-from frigate.edgetpu import LocalObjectDetector
-from frigate.motion import MotionDetector
-from frigate.object_processing import CameraState
-from frigate.objects import ObjectTracker
-from frigate.util import (
+sys.path.append("/lab/frigate")
+
+from frigate.config import FrigateConfig  # noqa: E402
+from frigate.motion import MotionDetector  # noqa: E402
+from frigate.object_detection import LocalObjectDetector  # noqa: E402
+from frigate.object_processing import CameraState  # noqa: E402
+from frigate.objects import ObjectTracker  # noqa: E402
+from frigate.util import (  # noqa: E402
     EventsPerSecond,
     SharedMemoryFrameManager,
     draw_box_with_label,
 )
-from frigate.video import capture_frames, process_frames, start_or_restart_ffmpeg
+from frigate.video import (  # noqa: E402
+    capture_frames,
+    process_frames,
+    start_or_restart_ffmpeg,
+)
 
 logging.basicConfig()
 logging.root.setLevel(logging.DEBUG)
@@ -115,14 +116,14 @@ class ProcessClip:
         }
 
         detection_enabled = mp.Value("d", 1)
+        motion_enabled = mp.Value("d", True)
         stop_event = mp.Event()
-        model_shape = (self.config.model.height, self.config.model.width)
 
         process_frames(
             self.camera_name,
             self.frame_queue,
             self.frame_shape,
-            model_shape,
+            self.config.model,
             self.camera_config.detect,
             self.frame_manager,
             motion_detector,
@@ -133,6 +134,7 @@ class ProcessClip:
             objects_to_track,
             object_filters,
             detection_enabled,
+            motion_enabled,
             stop_event,
             exit_on_empty=True,
         )
@@ -309,7 +311,6 @@ def process(path, label, output, debug_path):
 
         for result in results:
             if count == 0:
-
                 # Writing headers of CSV file
                 header = ["file"] + list(result[1].keys())
                 csv_writer.writerow(header)

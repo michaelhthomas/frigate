@@ -2,8 +2,10 @@
 *.pyc
 *.swp
 debug
-.vscode
-config/config.yml
+.vscode/*
+!.vscode/launch.json
+config/*
+!config/*.example
 models
 *.mp4
 *.ts
@@ -14,3 +16,5 @@ web/build
 web/node_modules
 web/coverage
 core
+!/web/**/*.ts
+.idea/*

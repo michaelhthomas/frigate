@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/preact';
 
 describe('Select', () => {
   test('on focus, shows a menu', async () => {
-    const handleChange = jest.fn();
+    const handleChange = vi.fn();
     render(
       <Select
         label="Tacos"
@@ -28,7 +28,7 @@ describe('Select', () => {
   });
 
   test('allows keyboard navigation', async () => {
-    const handleChange = jest.fn();
+    const handleChange = vi.fn();
     render(
       <Select
         label="Tacos"
